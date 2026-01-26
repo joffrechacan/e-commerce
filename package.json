@@ -10,11 +10,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "ejs": "^3.1.10",
     "express": "^5.2.1",
-    "mongoose": "^9.1.4"
+    "mongoose": "^8.10.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.11"

@@ -1,55 +1,104 @@
-// 1. Importar la librería para crear aplicaciones Web
+// 1. Importar librerías
 const express = require('express');
-const mongoose = requiere('mongoose');
-//importar modelo del producto
-const producto = requiere (',/models/producto')
-// 2. Crear una instacia de express (aplicación principal)
+const mongoose = require('mongoose');
+
+// Importar modelo Producto
+const Producto = require('./models/producto');
+
+// 2. Crear instancia de Express
 const app = express();
 
-// 3. Definir un puerto sobre el cual funciona nuestra app
+// 3. Puerto
 const PORT = 3000;
 
 // --- CONFIGURACIÓN ---
-// Establecer EJS como motor de vistas
 app.set('view engine', 'ejs');
-
-// Establecer la carpeta publica con elementos estáticos
 app.use(express.static('public'));
 
-//---- CONEXION CON MONGODB----
+// Middleware para manejar JSON (opcional pero recomendado)
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// --- CONEXIÓN A MONGODB ---
 mongoose.connect('mongodb://127.0.0.1:27017/tienda')
-    .then (()=> console.log("[OK] Conectado a MongoDB local"))
-    .catch(err => console.log("[FAIL] Error de conexion", err))
+    .then(() => console.log('[OK] Conectado a MongoDB local'))
+    .catch(err => console.log('[FAIL] Error de conexión', err));
 
-//Consultar la lista de productos
-const listaproductos =await producto.find ();
+// --- RUTAS ---
 
+// Ruta principal
+app.get('/', async (req, res) => {
+    try {
+        const listaProductos = await Producto.find();
 
-// -- RUTAS --
-app.get('/', async(req, res) => {
-    // Renderizar la plantilla con los datos proporcionados
-    res.render('index', { 
-        productos: listaProductos, 
-        titulo: "Todos los Productos" 
-    }); 
+        res.render('index', {
+            productos: listaProductos,
+            titulo: 'Todos los Productos'
+        });
+    } catch (error) {
+        res.status(500).send('Error al obtener productos');
+    }
 });
 
-// Ruta dinámica para categorías
-app.get('/categoria/:nombreCategoria', (req, res) => {
-    const cat = req.params.nombreCategoria;
-    
-    // Filtramos el arreglo según la categoría de la URL
-    const productosFiltrados = listaProductos.filter(
-        p => p.categoria === cat);
-    
-    res.render('index', { 
-        productos: productosFiltrados, 
-        titulo: cat.charAt(0).toUpperCase() + cat.slice(1) // Para poner la primera letra en mayúscula
-    });
+// Ruta dinámica por categoría
+app.get('/categoria/:nombreCategoria', async (req, res) => {
+    try {
+        const cat = req.params.nombreCategoria;
+
+        const productosFiltrados = await Producto.find({ categoria: cat });
+
+        res.render('index', {
+            productos: productosFiltrados,
+            titulo: cat.charAt(0).toUpperCase() + cat.slice(1)
+        });
+    } catch (error) {
+        res.status(500).send('Error al obtener productos por categoría');
+    }
 });
 
-// 5. Encender el servidor
-app.listen(PORT, () =>{
+// 5. Encender servidor
+app.listen(PORT, () => {
     console.log(`>>> Servidor corriendo en http://localhost:${PORT}`);
-    console.log(`>>> Presione Ctrl + c para detener`);
+    console.log('>>> Presione Ctrl + C para detener');
+});
+//6. Detalle del producto
+app.get('/producto/:id', async (req, res) => {
+    try {
+        const producto = await Producto.findById(req.params.id);
+
+        res.render('detalle', {
+            producto
+        });
+    } catch (error) {
+        res.status(404).send('Producto no encontrado');
+    }
+});
+
+//7. Formulario nuevo producto 
+app.get('/admin/productos/nuevo', (req, res) => {
+    res.render('form-producto', { producto: {} });
+});
+
+//8. Guardar producto
+app.post('/admin/productos', async (req, res) => {
+    await Producto.create(req.body);
+    res.redirect('/');
+});
+
+//9. Editar producto
+app.get('/admin/productos/editar/:id', async (req, res) => {
+    const producto = await Producto.findById(req.params.id);
+    res.render('form-producto', { producto });
+});
+
+//10.- Actualizar producto
+app.post('/admin/productos/editar/:id', async (req, res) => {
+    await Producto.findByIdAndUpdate(req.params.id, req.body);
+    res.redirect('/');
+});
+
+//11. Eliminar producto
+app.post('/admin/productos/eliminar/:id', async (req, res) => {
+    await Producto.findByIdAndDelete(req.params.id);
+    res.redirect('/');
 });
